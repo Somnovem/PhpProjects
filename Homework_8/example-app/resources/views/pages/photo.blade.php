@@ -91,7 +91,7 @@
             let data = new FormData(frmCreatePhoto)
             clearError()
 
-            fetch(`/api/photo/${data.id}`, {
+            fetch(`/api/photo`, {
                 method: 'POST',
                 body: data
             })
