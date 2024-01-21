@@ -2,13 +2,13 @@
 
 namespace App\Http\Requests\Photo;
 
-use App\Models\Photo;
+use App\Models\PhotoTag;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\ValidationException;
 
-class CreatePhotoRequest extends FormRequest
+class CreatePhotoTagRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -26,15 +26,11 @@ class CreatePhotoRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => 'required|string|min:3|max:64',
-            'tags' => 'array',
-            'tags.*' => 'exists:photo_tags,id',
-            'category_id' => 'required|exists:categories,id',
-            'photo' => 'required|file|mimes:jpeg,png,jpg,gif,webp|max:8096'
+            'name'=>'required|min:3|max:20|unique:photo_tags,name|string',
+            'slug'=>'required|min:3|max:20|unique:photo_tags,slug|string'
         ];
     }
 
-    // Если возникает ошибка валидации
     protected function failedValidation(Validator $validator)
     {
         $response = new JsonResponse(['errors' => $validator->errors()], 422);
@@ -42,8 +38,8 @@ class CreatePhotoRequest extends FormRequest
         throw new ValidationException($validator, $response);
     }
 
-    public function getModelFromRequest() : Photo
+    public function getModelFromRequest() : PhotoTag
     {
-        return new Photo(($this->all()));
+        return new PhotoTag(($this->all()));
     }
 }

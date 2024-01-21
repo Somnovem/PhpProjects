@@ -6,6 +6,7 @@ use App\Http\Requests\Photo\CreatePhotoRequest;
 use App\Models\Photo;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 class PhotoController extends Controller
 {
@@ -14,7 +15,7 @@ class PhotoController extends Controller
      */
     public function index()
     {
-        return Photo::with('category')->get();
+        return Photo::with('category','tags')->get();
     }
 
     /**
@@ -24,7 +25,18 @@ class PhotoController extends Controller
     {
         try {
             $photo = $request->getModelFromRequest();
+
+            $file = $request->file('photo');
+            $filename = time() . $file->getClientOriginalName();
+            $filePath = $file->storeAs('public/photos',$filename);
+            $photo->url = url(Storage::url($filePath));
+
+            $photo->category()->associate($request->input('category_id'));
             $photo->save();
+
+            if ($request->has('tags')){
+                $photo->tags()->attach($request->input('tags'));
+            }
             return $photo;
         } catch (\Exception $e) {
             return  $e->getMessage();
@@ -37,8 +49,12 @@ class PhotoController extends Controller
      */
     public function show(int $id)
     {
-        $photo = Photo::where('id', '=', $id)->with('category')->get();
-        return $photo;
+        try{
+            return Photo::where('id', '=', $id)
+                ->with('category', 'tags')->get();
+        } catch (\Exception $e) {
+            return $e->getMessage();
+        }
     }
 
     /**
@@ -46,18 +62,33 @@ class PhotoController extends Controller
      */
     public function update(CreatePhotoRequest $request, Photo $photo)
     {
-        $photo->update([
-            'name' => $request->input('name'),
-            'category_id' => $request->input('category_id'),
-        ]);
-        return $photo;
+        try {
+            $photo->update([
+                'name' => $request->input('name'),
+                'category_id' => $request->input('category_id'),
+            ]);
+
+            // Detach existing tags
+            $photo->tags()->detach();
+
+            // Attach new tags
+            if ($request->has('tags')) {
+                $photo->tags()->attach($request->input('tags'));
+            }
+
+            return $photo;
+        } catch (\Exception $e) {
+            return $e->getMessage();
+        }
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Photo $photo)
+    public function destroy(int $id)
     {
+        $photo = Photo::findOrFail($id);
+        $photo->tags()->detach();
         $photo->delete();
         return response()->json([], 204);
     }
