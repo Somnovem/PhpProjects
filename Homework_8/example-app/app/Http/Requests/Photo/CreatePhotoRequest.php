@@ -15,7 +15,7 @@ class CreatePhotoRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return true;
+        return auth()->check();
     }
 
     /**
@@ -29,7 +29,8 @@ class CreatePhotoRequest extends FormRequest
             'name' => 'required|string|min:3|max:64',
             'tags' => 'array',
             'tags.*' => 'exists:photo_tags,id',
-            'category_id' => 'required|exists:categories,id',
+            'category_id' => 'required|exists:photo_categories,id',
+            'user_id' => 'required|exists:users,id',
             'photo' => 'required|file|mimes:jpeg,png,jpg,gif,webp|max:8096'
         ];
     }
