@@ -3,9 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\Photo\CreatePhotoRequest;
-use App\Http\Services\Interfaces\EntitySeviceInterface;
-use App\Http\Services\PhotoService;
 use App\Models\Photo;
+use App\Services\CacheService;
+use App\Services\Interfaces\EntityServiceInterface;
+use App\Services\PhotoService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -13,12 +14,16 @@ use Illuminate\Support\Facades\Storage;
 
 class PhotoController extends Controller
 {
-    private EntitySeviceInterface $photoSevice;
+    private EntityServiceInterface $photoService;
     public function __construct(
-        private PhotoService $photoService)
+        PhotoService $photoService)
     {
-
+        // $this->photoService = $photoService;
+        $this->photoService = new CacheService($photoService,
+            'photo_pages_', 'photo_id',
+            env('CACHE_PHOTO_ALL_TTL', 30), env('CACHE_PHOTO_ID', 30));
     }
+
 
     /**
      * Display a listing of the resource.
@@ -28,7 +33,7 @@ class PhotoController extends Controller
         $per_page = $request->input('per_page',2);
         $page = $request->input('page',1);
 
-       return $this->photoService->index($per_page,$page);
+        return $this->photoService->index($per_page,$page);
     }
 
     /**
@@ -65,23 +70,24 @@ class PhotoController extends Controller
      */
     public function update(CreatePhotoRequest $request, Photo $photo)
     {
-        try {
-            $photo->update([
-                'name' => $request->input('name'),
-                'category_id' => $request->input('category_id'),
-            ]);
-            Cache::forget('photo_id_'.$photo->id);
-            Cache::flush('photo_page*');
-            // Detach existing tags
-            $photo->tags()->detach();
-            // Attach new tags
-            if ($request->has('tags')) {
-                $photo->tags()->attach($request->input('tags'));
-            }
-            return $photo;
-        } catch (\Exception $e) {
-            return $e->getMessage();
-        }
+//        try {
+//            $photo->update([
+//                'name' => $request->input('name'),
+//                'category_id' => $request->input('category_id'),
+//            ]);
+//            Cache::forget('photo_id_'.$photo->id);
+//            Cache::flush('photo_page*');
+//            // Detach existing tags
+//            $photo->tags()->detach();
+//            // Attach new tags
+//            if ($request->has('tags')) {
+//                $photo->tags()->attach($request->input('tags'));
+//            }
+//            return $photo;
+//        } catch (\Exception $e) {
+//            return $e->getMessage();
+//        }
+        Cache::forget('photo_id_' .$photo->id);
     }
 
     /**

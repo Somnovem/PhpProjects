@@ -30,7 +30,6 @@ class CreatePhotoRequest extends FormRequest
             'tags' => 'array',
             'tags.*' => 'exists:photo_tags,id',
             'category_id' => 'required|exists:photo_categories,id',
-            'user_id' => 'required|exists:users,id',
             'photo' => 'required|file|mimes:jpeg,png,jpg,gif,webp|max:8096'
         ];
     }
