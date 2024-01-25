@@ -2,6 +2,10 @@
 
 namespace App\Providers;
 
+use App\Events\UserRegisterEvent;
+use App\Events\UserUploadPhotoEvent;
+use App\Listeners\UserRegisterListener;
+use App\Listeners\UserUploadPhotoListener;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
@@ -17,6 +21,12 @@ class EventServiceProvider extends ServiceProvider
     protected $listen = [
         Registered::class => [
             SendEmailVerificationNotification::class,
+        ],
+        UserUploadPhotoEvent::class => [
+            UserUploadPhotoListener::class,
+        ],
+        UserRegisterEvent::class => [
+            UserRegisterListener::class,
         ],
     ];
 

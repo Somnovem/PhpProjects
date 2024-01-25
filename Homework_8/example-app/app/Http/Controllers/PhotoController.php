@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\UserUploadPhotoEvent;
 use App\Http\Requests\Photo\CreatePhotoRequest;
 use App\Models\Photo;
 use App\Services\CacheService;
@@ -42,14 +43,23 @@ class PhotoController extends Controller
     public function store(CreatePhotoRequest $request)
     {
         try {
-            Log::debug($request->user());
             $photo = $request->getModelFromRequest();
             $file = $request->file('photo');
             $filename = time() . $file->getClientOriginalName();
             $filePath = $file->storeAs('public/photos',$filename);
             $photo->url = url(Storage::url($filePath));
             $photo->user_id = $request->user()->id;
-            $photo->save();
+
+            try {
+                $photo->save();
+                //event(new UserUploadPhotoEvent($photo));
+                UserUploadPhotoEvent::dispatch($photo);
+            }
+            catch (\Exception $e){
+
+            }
+
+
             return $photo;
         } catch (\Exception $e) {
             return  $e->getMessage();
