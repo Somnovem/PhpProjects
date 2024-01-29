@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Events\UserUploadPhotoEvent;
 use App\Http\Requests\Photo\CreatePhotoRequest;
+use App\Jobs\PreloadUploadedPhotoJob;
 use App\Models\Photo;
+use App\Notifications\UserUploadPhotoNotification;
 use App\Services\CacheService;
 use App\Services\Interfaces\EntityServiceInterface;
 use App\Services\PhotoService;
@@ -47,13 +49,15 @@ class PhotoController extends Controller
             $file = $request->file('photo');
             $filename = time() . $file->getClientOriginalName();
             $filePath = $file->storeAs('public/photos',$filename);
+            $photo->storage_path = $filePath;
             $photo->url = url(Storage::url($filePath));
             $photo->user_id = $request->user()->id;
-
             try {
                 $photo->save();
                 //event(new UserUploadPhotoEvent($photo));
                 UserUploadPhotoEvent::dispatch($photo);
+                PreloadUploadedPhotoJob::dispatch($filePath);
+                $request->user()->notify(new UserUploadPhotoNotification());
             }
             catch (\Exception $e){
 

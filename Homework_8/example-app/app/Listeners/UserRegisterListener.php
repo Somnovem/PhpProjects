@@ -9,7 +9,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
-class UserRegisterListener
+class UserRegisterListener implements ShouldQueue
 {
     /**
      * Create the event listener.
