@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Events\UserUploadPhotoEvent;
+use App\Jobs\PreloadUploadedPhotoJob;
 use App\Models\Photo;
 use App\Notifications\UserUploadPhotoNotification;
 use App\Services\Interfaces\EntityServiceInterface;
@@ -17,7 +19,6 @@ class PhotoService implements EntityServiceInterface
 
     function index(int $page, int $per_page): LengthAwarePaginator
     {
-        info(' С сущностью работает сервис');
         $photos = Photo::with('category')->paginate($per_page, ['*'], 'page', $page);
         return $photos;
     }
@@ -25,43 +26,49 @@ class PhotoService implements EntityServiceInterface
     function store(Request $request) : Model
     {
         $photo = new Photo($request->all());
-        $user_id = $request->user()->id;
-
-        // Получаем файл из запроса
         $file = $request->file('photo');
-        // Генерируем уникальное имя для файла
-        $filename = time() . '_' . $file->getClientOriginalName();
-
-        // Получите путь к файлу
-        $filePath = $file->storeAs('public/photos', $filename);
-        // Получите URL файла
-        $fileUrl = url(Storage::url($filePath));
-
-        // Сохраняем URL в базе
-        $photo->url = $fileUrl;
-
-        // Уведомим пользователя о том, что его фото загружено
-        $request->user()->notify(new UserUploadPhotoNotification());
-
+        $filename = time() . $file->getClientOriginalName();
+        $filePath = $file->storeAs('public/photos',$filename);
+        $photo->storage_path = $filePath;
+        $photo->url = url(Storage::url($filePath));
+        $photo->user_id = $request->user()->id;
         try {
             $photo->save();
-        } catch (\Exception $e) {
+            //event(new UserUploadPhotoEvent($photo));
+            UserUploadPhotoEvent::dispatch($photo);
+            PreloadUploadedPhotoJob::dispatch($filePath);
+            $request->user()->notify(new UserUploadPhotoNotification());
+        }
+        catch (\Exception $e){
             Log::error(__CLASS__ . '::' . __METHOD__, (array)$e->getMessage());
         }
 
         return $photo;
+
     }
 
     function show(int $id): Model
     {
-        info(' С сущностью работает сервис');
         $photo = Photo::where('id', '=', $id)
             ->with('category', 'tags')->first();
         return $photo;
     }
 
-    public function update(Model $entity): bool
+    public function update(Request $request, Model $entity): bool
     {
+        try {
+            $entity->update([
+                'name' => $request->input('name'),
+                'category_id' => $request->input('category_id'),
+            ]);
+            $entity->tags()->detach();
+            if ($request->has('tags')) {
+                $entity->tags()->attach($request->input('tags'));
+            }
+            Cache::flush('photo_page*');
+        } catch (\Exception $e) {
+            Log::error(__CLASS__ . '::' . __METHOD__, (array)$e->getMessage());
+        }
         return $entity->update();
     }
 
@@ -70,5 +77,6 @@ class PhotoService implements EntityServiceInterface
         $photo = Photo::findOrFail($id);
         $photo->tags()->detach();
         $photo->delete();
+        Cache::flush('photo_page*');
     }
 }

@@ -24,7 +24,7 @@ class PhotoController extends Controller
         // $this->photoService = $photoService;
         $this->photoService = new CacheService($photoService,
             'photo_pages_', 'photo_id',
-            env('CACHE_PHOTO_ALL_TTL', 30), env('CACHE_PHOTO_ID', 30));
+            env('CACHE_PHOTO_ALL_TTL', 30), env('CACHE_PHOTO_ID_TTL', 30));
     }
 
 
@@ -44,31 +44,7 @@ class PhotoController extends Controller
      */
     public function store(CreatePhotoRequest $request)
     {
-        try {
-            $photo = $request->getModelFromRequest();
-            $file = $request->file('photo');
-            $filename = time() . $file->getClientOriginalName();
-            $filePath = $file->storeAs('public/photos',$filename);
-            $photo->storage_path = $filePath;
-            $photo->url = url(Storage::url($filePath));
-            $photo->user_id = $request->user()->id;
-            try {
-                $photo->save();
-                //event(new UserUploadPhotoEvent($photo));
-                UserUploadPhotoEvent::dispatch($photo);
-                PreloadUploadedPhotoJob::dispatch($filePath);
-                $request->user()->notify(new UserUploadPhotoNotification());
-            }
-            catch (\Exception $e){
-
-            }
-
-
-            return $photo;
-        } catch (\Exception $e) {
-            return  $e->getMessage();
-        }
-
+        return $this->photoService->store($request);
     }
 
     /**
@@ -84,24 +60,7 @@ class PhotoController extends Controller
      */
     public function update(CreatePhotoRequest $request, Photo $photo)
     {
-//        try {
-//            $photo->update([
-//                'name' => $request->input('name'),
-//                'category_id' => $request->input('category_id'),
-//            ]);
-//            Cache::forget('photo_id_'.$photo->id);
-//            Cache::flush('photo_page*');
-//            // Detach existing tags
-//            $photo->tags()->detach();
-//            // Attach new tags
-//            if ($request->has('tags')) {
-//                $photo->tags()->attach($request->input('tags'));
-//            }
-//            return $photo;
-//        } catch (\Exception $e) {
-//            return $e->getMessage();
-//        }
-        Cache::forget('photo_id_' .$photo->id);
+        return $this->photoService->update($request, $photo);
     }
 
     /**
@@ -109,11 +68,7 @@ class PhotoController extends Controller
      */
     public function destroy(int $id)
     {
-        $photo = Photo::findOrFail($id);
-        Cache::forget('photo_id_'.$photo->id);
-        Cache::flush('photo_page*');
-        $photo->tags()->detach();
-        $photo->delete();
+        $this->photoService->destroy($id);
         return response()->json([], 204);
     }
 

@@ -43,7 +43,11 @@ class PreloadUploadedPhotoJob implements ShouldQueue
         $filename = pathinfo($this->photoPath, PATHINFO_FILENAME);
         $preloadName = $filename . '_preload.' . $extension;
         $preloadPath = $directory . '/preloads/' . $preloadName;
-        info($preloadPath);
         Storage::put($preloadPath, $photoImage->toJpeg());
+        $photo = Photo::where('storage_path', $this->photoPath)->first();
+        $photo->update([
+            'storage_preloaded_path' => $preloadPath,
+            'preloaded_url' => url(Storage::url($preloadPath)),
+        ]);
     }
 }

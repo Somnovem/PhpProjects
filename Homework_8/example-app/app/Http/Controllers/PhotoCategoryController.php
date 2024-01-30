@@ -3,18 +3,35 @@
 namespace App\Http\Controllers;
 
 use App\Models\PhotoCategoryModel;
+use App\Services\CacheService;
+use App\Services\Interfaces\EntityServiceInterface;
+use App\Services\PhotoCategoryService;
 use Illuminate\Http\Request;
 use App\Http\Requests\Photo\CreatePhotoCategoryRequest;
 use Illuminate\Support\Facades\Log;
 
 class PhotoCategoryController extends Controller
 {
+
+    private EntityServiceInterface $photoCategoryService;
+    public function __construct(
+        PhotoCategoryService $photoCategoryService)
+    {
+
+        $this->photoCategoryService = new CacheService($photoCategoryService,
+            'photo_tags_', 'photo_tag_id',
+            env('CACHE_PHOTO_ALL_TTL', 30), env('CACHE_PHOTO_ID_TTL', 30));
+    }
+
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        return PhotoCategoryModel::with('photos')->get();
+        $per_page = $request->input('per_page',2);
+        $page = $request->input('page',1);
+
+        return $this->photoCategoryService->index($per_page,$page);
     }
 
     /**
@@ -22,13 +39,7 @@ class PhotoCategoryController extends Controller
      */
     public function store(CreatePhotoCategoryRequest $request)
     {
-        try {
-            $photoCategory = $request->getModelFromRequest();
-            $photoCategory->save();
-            return $photoCategory;
-        } catch (\Exception $e) {
-            return  $e->getMessage();
-        }
+        return $this->photoCategoryService->store($request);
     }
 
     /**
@@ -36,10 +47,7 @@ class PhotoCategoryController extends Controller
      */
     public function show(int $id)
     {
-        $cat = PhotoCategoryModel::where('id', '=', $id)
-            ->with('photos')->get();
-        //dd ($cat);
-        return $cat;
+        return $this->photoCategoryService->show($id);
     }
 
     /**
@@ -47,23 +55,16 @@ class PhotoCategoryController extends Controller
      */
     public function update(CreatePhotoCategoryRequest $request, PhotoCategoryModel $model)
     {
-        $modelToUpdate = PhotoCategoryModel::find($request->input('id'));
-        if (!$modelToUpdate) {
-            return response()->json(['error' => 'Model not found'], 404);
-        }
-        $modelToUpdate->update([
-            'name' => $request->input('name')
-        ]);
-        return $modelToUpdate;
+        return $this->photoCategoryService->update($request, $model);
     }
 
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(PhotoCategoryModel $photoCategory)
+    public function destroy(int $id)
     {
-        if($photoCategory->id != "1")$photoCategory->delete();
+        $this->photoCategoryService->destroy($id);
         return response()->json([], 204);
     }
 }

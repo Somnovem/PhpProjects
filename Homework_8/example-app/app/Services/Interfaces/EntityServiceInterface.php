@@ -37,7 +37,7 @@ interface EntityServiceInterface
      * @param Model $entity
      * @return bool
      */
-    public function update(Model $entity) : bool;
+    public function update(Request $request, Model $entity) : bool;
 
     /**
      * Удаление сущности

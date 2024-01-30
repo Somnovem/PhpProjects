@@ -4,15 +4,34 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\Photo\CreatePhotoTagRequest;
 use App\Models\PhotoTag;
+use App\Services\CacheService;
+use App\Services\Interfaces\EntityServiceInterface;
+use App\Services\PhotoTagService;
+use Illuminate\Http\Request;
 
 class PhotoTagController extends Controller
 {
+
+    private EntityServiceInterface $photoTagService;
+    public function __construct(
+        PhotoTagService $photoTagService)
+    {
+
+        $this->photoTagService = new CacheService($photoTagService,
+            'photo_tags_', 'photo_tag_id',
+            env('CACHE_PHOTO_ALL_TTL', 30), env('CACHE_PHOTO_ID_TTL', 30));
+    }
+
+
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        return PhotoTag::all();
+        $per_page = $request->input('per_page',2);
+        $page = $request->input('page',1);
+
+        return $this->photoTagService->index($per_page,$page);
     }
 
     /**
@@ -20,13 +39,7 @@ class PhotoTagController extends Controller
      */
     public function store(CreatePhotoTagRequest $request)
     {
-        try {
-            $photoTag = $request->getModelFromRequest();
-            $photoTag->save();
-            return $photoTag;
-        } catch (\Exception $e) {
-            return  $e->getMessage();
-        }
+        return $this->photoTagService->store($request);
     }
 
     /**
@@ -34,8 +47,7 @@ class PhotoTagController extends Controller
      */
     public function show(int $id)
     {
-        return PhotoTag::where('id','=',$id)
-            ->with('photos')->get();
+        return $this->photoTagService->show($id);
     }
 
     /**
@@ -43,15 +55,7 @@ class PhotoTagController extends Controller
      */
     public function update(CreatePhotoTagRequest $request, PhotoTag $model)
     {
-        try {
-            $model->update([
-                'name' => $request->input('name'),
-                'slug' => $request->input('slug'),
-            ]);
-            return $model;
-        } catch (\Exception $e) {
-            return $e->getMessage();
-        }
+        return $this->photoTagService->update($request, $model);
     }
 
     /**
@@ -59,13 +63,7 @@ class PhotoTagController extends Controller
      */
     public function destroy(int $id)
     {
-        try {
-            $photoTag = PhotoTag::findOrFail($id);
-            $photoTag->delete();
-            return response()->json([], 204);
-        }
-        catch (\Exception $e){
-            return $e->getMessage();
-        }
+        $this->photoTagService->destroy($id);
+        return response()->json([], 204);
     }
 }

@@ -29,7 +29,6 @@ class CacheService implements EntityServiceInterface
 
     function index(int $page, int $per_page): LengthAwarePaginator
     {
-        info(' работает Кеш');
         $entities = Cache::remember($this->cachePrefixMany . $page . 'per_page' . $per_page, $this->cacheManyTTL
             , function  () use ($per_page, $page) {
                 return $this->entityService->index($page, $per_page);
@@ -39,7 +38,7 @@ class CacheService implements EntityServiceInterface
 
     function show(int $id): Model
     {
-        info(' работает Кеш');
+        // forever to keep in cache indefinitely
         $entity = Cache::remember($this->cachePrefixById . $id, $this->cacheByIdTTL,
             function  () use ($id) {
                 return $this->entityService->show($id);
@@ -47,10 +46,10 @@ class CacheService implements EntityServiceInterface
         return $entity;
     }
 
-    public function update(Model $entity): bool
+    public function update(Request $request, Model $entity): bool
     {
         Cache::forget($this->cachePrefixById . $entity->id);
-        return $this->entityService->update($entity);
+        return $this->entityService->update($request, $entity);
     }
 
     public function destroy(int $id): void
