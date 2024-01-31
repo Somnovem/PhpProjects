@@ -3,9 +3,8 @@
 namespace App\Http\Controllers\Cool;
 
 use App\Http\Controllers\Base\BaseResourceController;
-use App\Http\Requests\Photo\CreatePhotoRequest;
 use App\Services\CacheService;
-use App\Services\PhotoService;
+use App\Services\Photos\PhotoService;
 
 class CoolPhotoController extends BaseResourceController
 {

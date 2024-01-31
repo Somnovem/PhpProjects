@@ -2,18 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use App\Events\UserUploadPhotoEvent;
 use App\Http\Requests\Photo\CreatePhotoRequest;
-use App\Jobs\PreloadUploadedPhotoJob;
 use App\Models\Photo;
-use App\Notifications\UserUploadPhotoNotification;
 use App\Services\CacheService;
 use App\Services\Interfaces\EntityServiceInterface;
-use App\Services\PhotoService;
+use App\Services\Photos\PhotoService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 
 class PhotoController extends Controller
 {

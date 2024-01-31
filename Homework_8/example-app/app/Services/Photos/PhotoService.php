@@ -1,11 +1,9 @@
 <?php
 
-namespace App\Services;
+namespace App\Services\Photos;
 
-use App\Events\UserUploadPhotoEvent;
-use App\Jobs\PreloadUploadedPhotoJob;
+use App\Jobs\OptimizeUploadPhotoJob;
 use App\Models\Photo;
-use App\Notifications\UserUploadPhotoNotification;
 use App\Services\Interfaces\EntityServiceInterface;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
@@ -26,18 +24,21 @@ class PhotoService implements EntityServiceInterface
     function store(Request $request) : Model
     {
         $photo = new Photo($request->all());
+        $photo->save();
+        $user_id = $request->user()->id;
         $file = $request->file('photo');
-        $filename = time() . $file->getClientOriginalName();
-        $filePath = $file->storeAs('public/photos',$filename);
-        $photo->storage_path = $filePath;
+        $extension = $file->getClientOriginalExtension();
+
+        $filename = $photo->id . '.original.' .  $extension;
+        $filePath = $file->storeAs('photos/user_id_' . $user_id . '/photo_id_' . $photo->id, $filename);
+
         $photo->url = url(Storage::url($filePath));
-        $photo->user_id = $request->user()->id;
+        $photo->user_id = $user_id;
         try {
             $photo->save();
-            //event(new UserUploadPhotoEvent($photo));
-            UserUploadPhotoEvent::dispatch($photo);
-            PreloadUploadedPhotoJob::dispatch($filePath);
-            $request->user()->notify(new UserUploadPhotoNotification());
+            //UserUploadPhotoEvent::dispatch($photo);
+            OptimizeUploadPhotoJob::dispatch($photo->id,$user_id);
+            //$request->user()->notify(new UserUploadPhotoNotification());
         }
         catch (\Exception $e){
             Log::error(__CLASS__ . '::' . __METHOD__, (array)$e->getMessage());

@@ -15,7 +15,6 @@ class Photo extends Model
     // Список полей, которые можно менять в базе данных
     protected $fillable = [
         'name', 'description', //'category_id'
-        'storage_preloaded_path', 'preloaded_url'
     ];
 
     public function category() : BelongsTo
@@ -41,6 +40,7 @@ class Photo extends Model
            $request = request();
            $model->tags()->detach();
            $model->category()->associate($request->input('category_id'));
+           $model->user()->associate($request->input('user_id'));
            if ($request->has('tags')){
                $model->tags()->attach($request->input('tags'));
            }
